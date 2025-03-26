@@ -5,94 +5,91 @@
 //     const svgRef = useRef();
 
 //     useEffect(() => {
-//         if (!data.length) return;
-
-//         const width = 800, height = 600;
-//         const svg = d3.select(svgRef.current)
-//             .attr("width", width)
-//             .attr("height", height);
-
-//         const root = d3.hierarchy({ children: data }).sum(d => d.value);
-//         d3.treemap().size([width, height]).padding(2)(root);
-
-//         const nodes = svg.selectAll("rect").data(root.leaves());
-//         nodes.enter()
-//             .append("rect")
-//             .merge(nodes)
-//             .transition().duration(500)
-//             .attr("x", d => d.x0)
-//             .attr("y", d => d.y0)
-//             .attr("width", d => d.x1 - d.x0)
-//             .attr("height", d => d.y1 - d.y0)
-//             .attr("fill", "steelblue");
-
-//         nodes.exit().remove();
-//     }, [data]);
-
-//     return <svg ref={svgRef}></svg>;
-// };
-
-// export default Treemap;
-// import React, { useEffect, useRef } from "react";
-// import * as d3 from "d3";
-
-// const Treemap = ({ data }) => {
-//     const svgRef = useRef();
-
-//     useEffect(() => {
 //         if (!data || !data.children) return;
 
-//         const width = 600;
-//         const height = 400;
+//         const width = 1000;
+//         const height = 600;
 
 //         const svg = d3.select(svgRef.current)
 //             .attr("width", width)
 //             .attr("height", height)
-//             .style("background", "#222")
-//             .style("color", "white");
+//             .attr("viewBox", `0 0 ${width} ${height}`)
+//             .style("overflow", "visible");
 
-//         const hierarchy = d3.hierarchy(data).sum(d => d.value);
-//         const treemap = d3.treemap().size([width, height]).padding(4);
-//         treemap(hierarchy);
+//         svg.selectAll("*").remove();
 
-//         const nodes = svg.selectAll("g").data(hierarchy.leaves());
+//         const positiveData = {
+//             name: "양수",
+//             children: data.children.filter(d => d.value >= 0)
+//         };
 
-//         // 📌 기존 요소 업데이트 (애니메이션 적용)
-//         nodes.transition()
-//             .duration(800)
-//             .attr("transform", d => `translate(${d.x0}, ${d.y0})`);
+//         const negativeData = {
+//             name: "음수",
+//             children: data.children.filter(d => d.value < 0)
+//         };
 
-//         nodes.select("rect")
-//             .transition()
-//             .duration(800)
-//             .attr("width", d => d.x1 - d.x0)
-//             .attr("height", d => d.y1 - d.y0)
-//             .attr("fill", (d, i) => d3.schemeCategory10[i % 10]);
+//         const posHierarchy = d3.hierarchy(positiveData).sum(d => d.value);
+//         const negHierarchy = d3.hierarchy(negativeData).sum(d => Math.abs(d.value));
 
-//         nodes.select("text")
-//             .transition()
-//             .duration(800)
-//             .attr("x", 5)
-//             .attr("y", 20)
-//             .text(d => `${d.data.name} (${d.data.value})`);
+//         const posRoot = d3.treemap()
+//             .size([width / 2, height])
+//             .padding(5)(posHierarchy);
 
-//         // 📌 새 요소 추가
-//         const newNodes = nodes.enter().append("g")
-//             .attr("transform", d => `translate(${d.x0}, ${d.y0})`);
+//         const negRoot = d3.treemap()
+//             .size([width / 2, height])
+//             .padding(5)(negHierarchy);
 
-//         newNodes.append("rect")
-//             .attr("width", d => d.x1 - d.x0)
-//             .attr("height", d => d.y1 - d.y0)
-//             .attr("fill", (d, i) => d3.schemeCategory10[i % 10])
-//             .attr("stroke", "white");
+//         const minNeg = d3.min(negativeData.children, d => d.value);
+//         const maxPos = d3.max(positiveData.children, d => d.value);
 
-//         newNodes.append("text")
-//             .attr("x", 5)
-//             .attr("y", 20)
-//             .text(d => `${d.data.name} (${d.data.value})`)
-//             .style("fill", "white")
-//             .style("font-size", "14px");
+//         const colorScale = d =>
+//             d >= 0
+//                 ? d3.interpolateReds(d / maxPos)
+//                 : d3.interpolateBlues(Math.abs(d / minNeg));
 
+//         // Positive nodes
+//         svg.selectAll("g.pos")
+//             .data(posRoot.leaves())
+//             .join("g")
+//             .attr("class", "pos")
+//             .attr("transform", d => `translate(${d.x0}, ${d.y0})`)
+//             .call(g => {
+//                 g.append("rect")
+//                     .attr("width", d => d.x1 - d.x0)
+//                     .attr("height", d => d.y1 - d.y0)
+//                     .attr("fill", d => colorScale(d.data.value))
+//                     .attr("stroke", "white");
+
+//                 g.append("text")
+//                     .attr("x", d => (d.x1 - d.x0) / 2)
+//                     .attr("y", d => (d.y1 - d.y0) / 2)
+//                     .attr("text-anchor", "middle")
+//                     .style("font-size", d => `${Math.min((d.x1 - d.x0) / 8, 14)}px`)
+//                     .style("fill", "white")
+//                     .text(d => `${d.data.name}\n(+${d.data.value}%)`);
+//             });
+
+//         // Negative nodes (shift x by width / 2)
+//         svg.selectAll("g.neg")
+//             .data(negRoot.leaves())
+//             .join("g")
+//             .attr("class", "neg")
+//             .attr("transform", d => `translate(${d.x0 + width / 2}, ${d.y0})`)
+//             .call(g => {
+//                 g.append("rect")
+//                     .attr("width", d => d.x1 - d.x0)
+//                     .attr("height", d => d.y1 - d.y0)
+//                     .attr("fill", d => colorScale(d.data.value))
+//                     .attr("stroke", "white");
+
+//                 g.append("text")
+//                     .attr("x", d => (d.x1 - d.x0) / 2)
+//                     .attr("y", d => (d.y1 - d.y0) / 2)
+//                     .attr("text-anchor", "middle")
+//                     .style("font-size", d => `${Math.min((d.x1 - d.x0) / 8, 14)}px`)
+//                     .style("fill", "white")
+//                     .text(d => `${d.data.name}\n(${d.data.value}%)`);
+//             });
 //     }, [data]);
 
 //     return <svg ref={svgRef}></svg>;
@@ -103,89 +100,189 @@ import React, { useEffect, useRef } from "react";
 import * as d3 from "d3";
 
 const Treemap = ({ data }) => {
-    const svgRef = useRef();
+  const svgRef = useRef();
 
-    useEffect(() => {
-        if (!data || !data.children) return;
+  useEffect(() => {
+    if (!data || !data.children) return;
 
-        const width = 800; // SVG 너비
-        const height = 500; // SVG 높이
+    const width = 1000;
+    const height = 600;
 
-        const svg = d3.select(svgRef.current)
-            .attr("width", width)
-            .attr("height", height)
-            .attr("viewBox", `0 0 ${width} ${height}`) // 뷰박스 설정
-            .style("overflow", "visible"); // 잘리지 않도록 설정
-        svg.selectAll("*").remove(); // 기존 요소 초기화
+    const svg = d3
+      .select(svgRef.current)
+      .attr("width", width)
+      .attr("height", height)
+      .attr("viewBox", `0 0 ${width} ${height}`)
+      .style("overflow", "visible");
 
-        // 계층 구조 생성 및 정렬 (절댓값 사용)
-        const hierarchy = d3.hierarchy(data)
-            .sum(d => Math.abs(d.value)) // 절댓값 사용
-            .sort((a, b) => b.value - a.value); // 절댓값을 기준으로 크기 정렬
+    svg.selectAll("*").remove();
 
-        const root = d3.treemap()
-            .size([width, height])
-            .padding(10)(hierarchy); // 패딩 증가
+    const positiveData = {
+      name: "양수",
+      children: data.children.filter((d) => d.value >= 0),
+    };
 
-        // 색상 스케일 설정
-        const minValue = d3.min(root.leaves(), d => d.data.value);
-        const maxValue = d3.max(root.leaves(), d => d.data.value);
+    const negativeData = {
+      name: "음수",
+      children: data.children.filter((d) => d.value < 0),
+    };
 
-        const colorScale = d => 
-            d >= 0 
-                ? d3.interpolateReds(d / maxValue) 
-                : d3.interpolateBlues(Math.abs(d / minValue));
+    const posHierarchy = d3
+      .hierarchy(positiveData)
+      .sum((d) => d.value)
+      .sort((a, b) => b.value - a.value);
 
-        // 노드 생성
-        const nodes = svg.selectAll("g")
-            .data(root.leaves(), d => d.data.name)
-            .join(
-                enter => {
-                    const g = enter.append("g")
-                        .attr("transform", d => `translate(${d.x0}, ${d.y0})`);
+    const negHierarchy = d3
+      .hierarchy(negativeData)
+      .sum((d) => Math.abs(d.value))
+      .sort((a, b) => a.value - b.value); // 음수 값 기준으로 정렬
 
-                    g.append("rect")
-                        .attr("width", 0)
-                        .attr("height", 0)
-                        .attr("fill", d => colorScale(d.data.value))
-                        .attr("stroke", "white")
-                        .transition()
-                        .duration(800)
-                        .attr("width", d => d.x1 - d.x0)
-                        .attr("height", d => d.y1 - d.y0);
+    const posRoot = d3
+      .treemap()
+      .size([width / 2, height])
+      .padding(5)(posHierarchy);
 
-                    g.append("text")
-                        .attr("x", d => (d.x1 - d.x0) / 2)
-                        .attr("y", d => (d.y1 - d.y0) / 2)
-                        .style("text-anchor", "middle")
-                        .style("font-size", "12px")
-                        .style("fill", "white")
-                        .style("opacity", 0)
-                        .text(d => `${d.data.name} (${d.data.value >= 0 ? "+" : ""}${d.data.value}%)`)
-                        .transition()
-                        .duration(800)
-                        .style("opacity", 1);
+    const negRoot = d3
+      .treemap()
+      .size([width / 2, height])
+      .padding(5)(negHierarchy);
 
-                    return g;
-                },
-                update => update
-                    .transition()
-                    .duration(800)
-                    .attr("transform", d => `translate(${d.x0}, ${d.y0})`)
-                    .select("rect")
-                    .attr("width", d => d.x1 - d.x0)
-                    .attr("height", d => d.y1 - d.y0)
-                    .attr("fill", d => colorScale(d.data.value)),
-                exit => exit
-                    .transition()
-                    .duration(500)
-                    .style("opacity", 0)
-                    .remove()
-            );
+    negRoot.eachBefore((node) => {
+      if (node.parent) {
+        node.x0 = width / 2 + node.x0;
+        node.x1 = width / 2 + node.x1;
+      }
+    });
 
-    }, [data]);
+    const minNeg = d3.min(negativeData.children, (d) => d.value);
+    const maxPos = d3.max(positiveData.children, (d) => d.value);
 
-    return <svg ref={svgRef}></svg>;
+    const colorScale = (d) =>
+      d >= 0
+        ? d3.interpolateReds(d / maxPos)
+        : d3.interpolateBlues(Math.abs(d / minNeg));
+
+    // Positive nodes
+    svg
+      .selectAll("g.pos")
+      .data(posRoot.leaves())
+      .join("g")
+      .attr("class", "pos")
+      .attr("transform", (d) => `translate(${d.x0}, ${d.y0})`)
+      .call((g) => {
+        // 사각형 그리기
+        g.append("rect")
+          .attr("width", (d) => d.x1 - d.x0)
+          .attr("height", (d) => d.y1 - d.y0)
+          .attr("fill", (d) => colorScale(d.data.value))
+          .attr("stroke", "white");
+      
+        g.append("text")
+          .attr("x", (d) => (d.x1 - d.x0) / 2)
+          .attr("y", (d) => (d.y1 - d.y0) / 2 - 6)
+          .attr("text-anchor", "middle")
+          .style("font-size", (d) => `${Math.max(Math.min((d.x1 - d.x0) / 8, 14), 8)}px`)
+          .style("fill", "white")
+          .selectAll("tspan")
+          .data((d) => {
+            const boxWidth = d.x1 - d.x0;
+            if (boxWidth < 40) return []; // 너무 작으면 아무것도 안 그림
+            if (boxWidth < 60) return [d.data.name]; // 작으면 한 줄만
+            return [d.data.name, `+${d.data.value}%`]; // 넉넉하면 두 줄
+          })
+          .enter()
+          .append("tspan")
+          .attr("x", (d, i, nodes) => {
+            const parent = d3.select(nodes[i].parentNode);
+            return parent.attr("x");
+          })
+          .attr("dy", (d, i) => (i === 0 ? 0 : "1.2em"))
+          .text((d) => d)
+          .on("mouseover", function (event, d) {
+            d3.select("#tooltip")
+              .style("opacity", 1)
+              .html(`<strong>${d.data.name}</strong><br/>${d.data.value}%`)
+              .style("left", event.pageX + "px")
+              .style("top", event.pageY - 28 + "px");
+          })
+          .on("mouseout", function () {
+            d3.select("#tooltip").style("opacity", 0);
+          });
+          g.on("mouseover", function (event, d) {
+            d3.select("#tooltip")
+              .style("opacity", 1)
+              .html(`<strong>${d.data.name}</strong><br/>${d.data.value}%`)
+              .style("left", event.pageX + 10 + "px")
+              .style("top", event.pageY - 30 + "px");
+          })
+          .on("mousemove", function (event) {
+            d3.select("#tooltip")
+              .style("left", event.pageX + 10 + "px")
+              .style("top", event.pageY - 30 + "px");
+          })
+          .on("mouseout", function () {
+            d3.select("#tooltip").style("opacity", 0);
+          });
+        });
+
+    // Negative nodes (shift x by width / 2)
+    svg
+      .selectAll("g.neg")
+      .data(negRoot.leaves())
+      .join("g")
+      .attr("class", "neg")
+      .attr("transform", (d) => `translate(${d.x0}, ${d.y0})`)
+      .call((g) => {
+        // 사각형 그리기
+        g.append("rect")
+          .attr("width", (d) => d.x1 - d.x0)
+          .attr("height", (d) => d.y1 - d.y0)
+          .attr("fill", (d) => colorScale(d.data.value))
+          .attr("stroke", "white");
+      
+        g.append("text")
+          .attr("x", (d) => (d.x1 - d.x0) / 2)
+          .attr("y", (d) => (d.y1 - d.y0) / 2 - 6)
+          .attr("text-anchor", "middle")
+          .style("font-size", (d) => `${Math.max(Math.min((d.x1 - d.x0) / 8, 14), 8)}px`)
+          .style("fill", "white")
+          .selectAll("tspan")
+          .data((d) => {
+            const boxWidth = d.x1 - d.x0;
+            if (boxWidth < 40) return []; // 너무 작으면 아무것도 안 그림
+            if (boxWidth < 60) return [d.data.name]; // 작으면 한 줄만
+            return [d.data.name, `${d.data.value}%`]; // 넉넉하면 두 줄
+          })
+          .enter()
+          .append("tspan")
+          .attr("x", (d, i, nodes) => {
+            const parent = d3.select(nodes[i].parentNode);
+            return parent.attr("x");
+          })
+          .attr("dy", (d, i) => (i === 0 ? 0 : "1.2em"))
+          .text((d) => d);
+
+        g.on("mouseover", function (event, d) {
+            d3.select("#tooltip")
+              .style("opacity", 1)
+              .html(`<strong>${d.data.name}</strong><br/>${d.data.value}%`)
+              .style("left", event.pageX + 10 + "px")
+              .style("top", event.pageY - 30 + "px");
+          })
+          .on("mousemove", function (event) {
+            d3.select("#tooltip")
+              .style("left", event.pageX + 10 + "px")
+              .style("top", event.pageY - 30 + "px");
+          })
+          .on("mouseout", function () {
+            d3.select("#tooltip").style("opacity", 0);
+          });
+        
+        });
+        
+  }, [data]);
+
+  return <svg ref={svgRef}></svg>;
 };
 
 export default Treemap;

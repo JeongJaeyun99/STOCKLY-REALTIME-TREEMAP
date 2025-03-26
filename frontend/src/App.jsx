@@ -96,8 +96,23 @@ function App() {
         <div >
             <h1>📈 실시간 테마주 트리맵</h1>
             <Treemap data={data} />
+            <div
+                id="tooltip"
+                style={{
+                    position: 'absolute',
+                    opacity: 0,
+                    pointerEvents: 'none',
+                    background: 'rgba(0,0,0,0.75)',
+                    color: 'white',
+                    padding: '6px 10px',
+                    fontSize: '12px',
+                    borderRadius: '4px',
+                    zIndex: 999
+                }}>
+            </div>
         </div>
     );
 }
 
 export default App;
+
