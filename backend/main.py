@@ -56,32 +56,13 @@ def fetch_data():
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     print("✅ 클라이언트 WebSocket 연결됨!")
-    global LAST_TREEMAP_DATA  # 전역 변수 사용
-    
-    # 서버 시작 시 첫 데이터 크롤링
-    df = fetch_data()
-    LAST_TREEMAP_DATA = {
-        "name": "테마주",
-        "children": [
-            {
-                "name": row["theme_name"],
-                "value": float(row["theme_diff"].replace('%', '').replace('+', '').strip()) if row["theme_diff"].replace('%', '').replace('+', '').replace('.', '', 1).replace('-', '').isdigit() else 0,
-                "code": row["theme_code"]
-            }
-            for _, row in df.iterrows()
-        ]
-    }
-
-    # 클라이언트가 연결되면 첫 데이터를 바로 전송
-    await websocket.send_text(json.dumps(LAST_TREEMAP_DATA, ensure_ascii=False))
-    print("✅ 서버 시작 후 첫 데이터 전송 완료")
 
     try:
         while True:
             current_time = datetime.now()
             if 9 <= current_time.hour < 18:
                 df = fetch_data()
-                LAST_TREEMAP_DATA = {
+                data = {
                     "name": "테마주",
                     "children": [
                         {
@@ -92,17 +73,19 @@ async def websocket_endpoint(websocket: WebSocket):
                         for _, row in df.iterrows()
                     ]
                 }
-                await websocket.send_text(json.dumps(LAST_TREEMAP_DATA, ensure_ascii=False))
+                await websocket.send_text(json.dumps(data, ensure_ascii=False))
                 print("✅ WebSocket 실시간 데이터 전송 완료")
             else:
-                # 18시 이후에는 마지막 데이터만 전송
                 await websocket.send_text(json.dumps(LAST_TREEMAP_DATA, ensure_ascii=False))
                 print("✅ 18시 이후, 마지막 데이터 반복 전송")
-            
+
             await asyncio.sleep(60)
     except Exception as e:
         print(f"❌ 오류 발생: {e}")
     finally:
         if websocket.client_state != WebSocketState.DISCONNECTED:
             await websocket.close()
-            print("🔌 WebSocket 연결 종료됨")
+            print("🔌 WebSocket 연결 종료됨, 3초 후 재연결 시도...")
+
+        await asyncio.sleep(3)  # 3초 대기 후 다시 WebSocket 연결을 시도
+        asyncio.create_task(websocket_endpoint(websocket))  # 재시도

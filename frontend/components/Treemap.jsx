@@ -7,8 +7,8 @@ const Treemap = ({ data }) => {
   useEffect(() => {
     if (!data || !data.children) return;
 
-    const width = 1000;
-    const height = 600;
+    const width = 855;
+    const height = 410;
 
     const svg = d3
       .select(svgRef.current)

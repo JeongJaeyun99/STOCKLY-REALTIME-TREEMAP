@@ -10,7 +10,7 @@ def fetch_data():
 
     try:
         url = "https://finance.finup.co.kr/Lab/ThemeLog"
-        browser.get(url)
+        browser.get(url)    
 
         # HTML 파싱
         div_first = BeautifulSoup(browser.page_source, "html.parser").find("div", class_="contents01")
